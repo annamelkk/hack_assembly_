@@ -17,6 +17,6 @@ run: $(TARGET)
 	./$(TARGET)
 
 clean:
-	rm -f $(OBJS) $(TARGET) image.bmp
+	rm -f $(OBJS) $(TARGET) output.bmp
 
 .PHONY: all clean run
