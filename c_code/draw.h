@@ -7,8 +7,8 @@
 #define WIDTH 512
 #define HEIGHT 256
 
-#define WORDS_PPR (WIDTH / 16)
-#define SIZE (HEIGHT * WORDS_PPR)
+#define WORDS_PR (WIDTH / 16)
+#define SIZE (HEIGHT * WORDS_PR)
 
 extern unsigned short	screen[SIZE]; // 8192 words, like in hack
 

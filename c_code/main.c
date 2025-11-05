@@ -16,6 +16,7 @@ int	main(void)
 	horizontal_line(y1, x1, x2, 1);  // black horizontal line
 	vertical_line(x1, y1, y2, 1);    // vertical line at left edge
 	vertical_line(x2, y1, y2, 1);    // vertical line at right edge
+	horizontal_line(y2, x2, x1, 1);
 
 	// draw some random test pixels
 	set_pixel(256, 128, 1);

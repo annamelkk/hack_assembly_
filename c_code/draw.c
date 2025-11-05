@@ -26,7 +26,7 @@ void	set_pixel(int x, int y, unsigned char color)
 	if ( x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT)
       		return ;
 
-	int	word_index = y * WORDS_PPR + (x / 16);
+	int	word_index = y * WORDS_PR + (x / 16);
 	int	bit_index = 15 - (x % 16); // leftomost pixel = bit 15
 
 	if (color)
@@ -83,16 +83,16 @@ void	vertical_line(int x, int y1, int y2, unsigned char color)
 
 void	write_bmp(const char *filename)
 {
-	int row_size = ((WIDTH * 3 + 3) / 4) * 4;
-	int filesize = 54 + row_size * HEIGHT;
+	int row_size = ((WIDTH * 3 + 3) / 4) * 4; // each row for BMP file must be 4 bytes be reqs
+	int filesize = 54 + row_size * HEIGHT; // header size + total size of pixel data
 
 	FILE *f = fopen(filename, "wb");
 	if (!f) return ;
 
-	// for BMP file header, to identify file as bmp
+	// to identify file as bmp
 	unsigned char	bmpfileheader[14] = { 'B', 'M', 0,0,0,0, 0,0,0,0, 54,0,0,0 };
 
-	// info header, stores image width, height and other info
+	// info header, stores image width, height and other info, setup for 24-bit BMP
 	unsigned char	bmpinfoheader[40] = { 40,0,0,0, 0,0,0,0, 0,0,0,0, 1,0,24,0 };
 	
 
@@ -120,13 +120,14 @@ void	write_bmp(const char *filename)
 	int padding = row_size - (WIDTH * 3);
 	unsigned char pad[3] = { 0, 0, 0 };
 
+	// BMP writes from bottom to top
 	int y = HEIGHT - 1;
 	while (y >= 0)
 	{
 		int x = 0;
 		while (x < WIDTH)
 		{
-			int word_index = y * WORDS_PPR + (x / 16);
+			int word_index = y * WORDS_PR + (x / 16);
 			int bit_index = 15 - (x % 16);
 
 			unsigned char	pixel;
