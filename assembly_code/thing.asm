@@ -10,16 +10,20 @@
 // R9: x2 / 16 (quotient)
 // R10: constant 16
 // R11: temp for swap
+// R12:
+// R13-R28 powers of 2 (2^0 through 2^15) 
+
+
 
 // validating y
 @R0
 D=M
 @INVALD
-D;JLT // y < 0
+D;JLT	// y < 0
 @256
 D=D-A
 @INVALID
-D;JGE // y>=256
+D;JGE	// y>=256
 
 
 
@@ -28,11 +32,7 @@ D;JGE // y>=256
 D=A
 @R10
 M=D
-// storing swap temp
-@temp
-D=A
-@R11
-M=D
+
 
 // check is x1 > x2
 @R1
@@ -44,19 +44,19 @@ D;JLE
 
 // function for swap using temp variable
 @R2
-D=M // D = x2
+D=M	// D = x2
 @temp
-M=D // temp = D = x2
+M=D	// temp = D = x2
 
 @R1
-D=M // D = x1
+D=M	// D = x1
 @R2
-M=D // x2 = x1
+M=D	// x2 = x1
 
 @temp
-D=M // D = temp
+D=M	// D = temp
 @R1
-M=D // x1 = temp
+M=D	// x1 = temp
 
 (NO_SWAP)
 
@@ -71,27 +71,27 @@ D=D+D
 D=D+D
 D=D+D
 @R4
-M=D // R4 = y * 32
+M=D	// R4 = y * 32
 
 // dividing x1 by 16
 @R8
-M=0 // initializing quotient
+M=0	// initializing quotient
 
 (DIV_X1_LOOP)
 	@R1
 	D=M
 	@16
-	D=D-M // D = x1 - 16
+	D=D-A	// D = x1 - 16
 	@DIV_X1_END
-	D;JLT // if negative get out of the loop
+	D;JLT	// if negative get out of the loop
 
 	@R1
-	M=D // x1 = x1 - 16
+	M=D	// x1 = x1 - 16
 	@R8
-	M=M+1 // quotient++
+	M=M+1	// quotient++
 	@DIV_X1_LOOP
 	0;JMP
-(DIC_X1_END)
+(DIV_X1_END)
 //R1 = x1 mod 16
 //R8 = x1 / 16
 
@@ -102,7 +102,7 @@ M=M+D
 @SCREEN
 D=A
 @R4
-M=M+D // address of start word SCREEN + 32y + x/16
+M=M+D	// address of start word SCREEN + 32y + x/16
 
 
 
@@ -117,27 +117,27 @@ D=D+D
 D=D+D
 D=D+D
 @R5
-M=D // R5 = y * 32
+M=D	// R5 = y * 32
 
 // dividing x2 by 16
 @R9
-M=0 // initializing quotient
+M=0	// initializing quotient
 
 (DIV_X2_LOOP)
 	@R2
 	D=M
 	@16
-	D=D-M // D = x2 - 16
+	D=D-A	// D = x2 - 16
 	@DIV_X2_END
-	D;JLT // if negative get out of the loop
+	D;JLT	// if negative get out of the loop
 
 	@R2
-	M=D // x2 = x2 - 16
+	M=D	// x2 = x2 - 16
 	@R9
-	M=M+1 // quotient++
+	M=M+1	// quotient++
 	@DIV_X2_LOOP
 	0;JMP
-(DIC_X2_END)
+(DIV_X2_END)
 //R2 = x2 mod 16
 //R9 = x2 / 16
 
@@ -148,8 +148,46 @@ M=M+D
 @SCREEN
 D=A
 @R5
-M=M+D // address of end word SCREEN + 32y + x/16
+M=M+D	// address of end word SCREEN + 32y + x/16
 
+
+
+
+// before checking for each case and masking we need a table if powers of twos, since the
+// hack assembly doesn't support bit shifing ((((
+
+// generate powers of 2 in R13-R28
+@1
+D=A
+@R13
+M=D
+
+@14	// loop 14 more times
+D=A
+@R12
+M=D	// counter
+
+@13
+D=A
+@R11
+M=D	// current address = 13
+
+(GEN_POWERS)
+	@R11
+	A=M	// A= value in R11
+	D=M	// value at address stored in A 
+	D=D+D	// D=D*2
+
+	@R11
+	M=M+1
+	A=M
+	M=D	// store next power
+
+	@R12
+	M=M-1
+	D=M
+	@GEN_POWERS
+D;JGT
 
 // we found all needed quantities now it is time to draw the functions, below are the cases we need to check
 
@@ -162,7 +200,7 @@ M=M+D // address of end word SCREEN + 32y + x/16
 @R5
 D=M
 @R4
-D=D-M // D = end - start
+D=D-M	// D = end - start
 
 @CASE_SINGLE_WORD
 D;JEQ
@@ -170,14 +208,14 @@ D;JEQ
 @1
 D=D-A
 @CASE_TWO_WORDS
-D;JEQ // if D-1=0 then two adjacent words
+D;JEQ	// if D-1=0 then two adjacent words
 
 // else 3 words
 @CASE_MULTIPLE_WORDS
 0;JMP
 
 
-(CASE_SIGNLE_WORDS)
+(CASE_SINGLE_WORDS)
 	// the code
 @END_DRAW
 0;JMP
@@ -188,7 +226,34 @@ D;JEQ // if D-1=0 then two adjacent words
 0;JMP
 
 (CASE_MULTIPLE_WORDS)
-	// the code
+	// the code for left edge mask
+
+
+	// fill middle words
+	@R4
+	D=M 
+	D=D+1 // increment address by one
+	@R6
+	M=D	// we store in R6 the address count which starts at start+1
+	
+	(FILL_LOOP)
+		@R6
+		D=M
+		@R5
+		D=D-M	// check if we are before end
+		@FILL_END
+		D;JGE	// if current >= end, done
+
+		@R6
+		A=M	// "dereference"
+		M=-1	// set everything to black
+
+		@R6
+		M=M+1	// increment counter
+		0;JMP
+	(FILL_END)
+
+	// the code for right edge mask
 @END_DRAW
 0;JMP
 
