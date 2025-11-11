@@ -1,0 +1,64 @@
+// R0: y
+// R1: x1 → becomes x1 mod 16 (start_bit)
+// R2: x2 → becomes x2 mod 16 (end_bit)
+// R3: color
+// R4: start_word_address
+// R5: end_word_address
+// R6: loop counter/general purpose temp
+// R7: mask/temp
+
+// user input y
+if (y < 0 || y >= 256)
+	goto INVALID
+
+// user input x1 and x2
+if (x2 < x1)
+	goto SWAP
+else
+	goto NO_SWAP
+
+
+SWAP
+	temp = x1
+	x1 = x2
+	x2 = temp
+
+
+// DIV_X1_LOOP
+// R1 will store the remainder and R6 the quotient
+
+while (x1 > 0)
+	x1 -= 16
+	quotient++
+
+start_word_address = SCREEN + 32*y + x1/16
+
+// DIV_X2_LOOP
+// R2 will store the remainder and R6 the quotient
+
+while (x2 > 0)
+	x2 -+ 16
+	quotient++
+
+end_word_address = SCREEN + 32*y + x2/16
+
+if (end_word_address - start_word_address == 0)
+	goto CASE_SINGLE_WORD
+else if (end_word_address - start_word_address == 1)
+	goto CASE_TWO_WORDS
+else
+	goto CASE_MULTIPLE_WORDS
+
+// function to calculate power
+// local vars : N
+
+*output = 1
+
+if (N == 0)
+	goto CALC_POWER_END
+while (N > 0)
+	*output *= 2
+	N--
+goto CALC_POWER_END
+
+

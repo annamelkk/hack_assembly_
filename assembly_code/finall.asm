@@ -41,7 +41,7 @@ M=D	// x2 = temp
 
 (NO_SWAP)
 
-// Calculate start_word_address = SCREEN + 32*y + x1/16
+// calculate start_word_address = SCREEN + 32*y + x1/16
 @R0
 D=M
 @R4
@@ -57,7 +57,7 @@ M=D
 D=D+M	// D = 32*y
 M=D	// R4 = y * 32
 
-// Divide x1 by 16, keep quotient in R4, remainder in R1
+// divide x1 by 16, keep quotient in R4, remainder in R1
 @R6
 M=0	// quotient counter
 
@@ -91,7 +91,7 @@ D=A
 D=D+M
 M=D	// R4 = SCREEN + 32*y + x1/16
 
-// Calculate end_word_address = SCREEN + 32*y + x2/16
+// calculate end_word_address = SCREEN + 32*y + x2/16
 @R0
 D=M
 @R5
@@ -141,7 +141,7 @@ D=A
 D=D+M
 M=D	// R5 = SCREEN + 32*y + x2/16
 
-// Determine case based on word addresses
+// determine case based on word addresses
 @R5
 D=M
 @R4
@@ -158,9 +158,9 @@ D;JEQ
 @CASE_MULTIPLE_WORDS
 0;JMP
 
-// ===== HELPER: Calculate 2^N =====
-// Input: R6 = N
-// Output: R7 = 2^N
+// power of 2
+// input R6 = N
+// output: R7 = 2^N
 (CALC_POWER)
 	@1
 	D=A
@@ -186,11 +186,11 @@ D;JEQ
 	(CALC_POWER_END)
 	@R6
 	A=M
-	0;JMP	// Return to caller (stored in R6 after power calc)
+	0;JMP	// return to caller (stored in R6 after power calc)
 
 // SINGLE WORD
 (CASE_SINGLE_WORD)
-	// Create left mask (bits x1 to 15)
+	// create left mask (bits x1 to 15)
 	@R1
 	D=M
 	@R6
@@ -207,14 +207,14 @@ D;JEQ
 	A=M
 	D=D&M	// D = left_mask & current_word
 	@R6
-	M=D	// Store in R6 temporarily
+	M=D	// store in R6 temporarily
 	
-	// Create right mask (bits 0 to x2)
+	// create right mask (bits 0 to x2)
 	@R2
 	D=M
 	D=D+1	// D = end_bit + 1
 	@R7
-	M=D	// Store for power calc
+	M=D	// store for power calc
 	@CALC_POWER_SINGLE_RIGHT
 	0;JMP
 	
@@ -253,7 +253,7 @@ D;JEQ
 	@END_DRAW
 	0;JMP
 
-// Power calculation jumps for SINGLE_WORD
+// power calculation jumps for SINGLE_WORD
 (CALC_POWER_SINGLE_LEFT)
 	@1
 	D=A
@@ -437,7 +437,7 @@ D;JEQ
 
 // MULTIPLE WORDS
 (CASE_MULTIPLE_WORDS)
-	// Left edge
+	// left edge
 	@R1
 	D=M
 	@R6
@@ -475,7 +475,7 @@ D;JEQ
 	M=D
 
 	(MULTI_MIDDLE)
-	// Fill middle words
+	// fill middle words
 	@R4
 	D=M
 	D=D+1
@@ -515,7 +515,7 @@ D;JEQ
 		0;JMP
 	(FILL_END)
 
-	// Right edge
+	// right edge
 	@R2
 	D=M
 	D=D+1
