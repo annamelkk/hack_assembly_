@@ -28,6 +28,8 @@ Each pixel is stored in memory at:
 
 $$\text{address} = \text{SCREEN} + 32 * y + (x / 16)$$
 $$\text{bit} = x \  \text{mod}  \ 16$$
+
+
 ### Registers Used (Assembly)
 
 | Register | Purpose                               |
