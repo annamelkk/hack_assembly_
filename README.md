@@ -53,6 +53,15 @@ $$\text{bit} = x \  \text{mod}  \ 16$$
 3. Add `SCREEN` base address to get absolute memory addresses.
 4. Fill bits between `x1` and `x2` using `set_pixel()` function.
 
+## Hack Assembly Implementation
+
+The Hack Assembly implementation should be tested inside the Nand2Tetris CPU emulator.
+
+Version 1 contains more optimized however not memory saving approach, and Version 2 uses less registers, however speed is compromised.
+
+The corresponding registers for x1, x2, y and color (1 for black, 0 for white) should be set.
+
+
 ## C Implementation
 
 The C version emulates Hack screen memory in an array and applies the same bitwise logic:

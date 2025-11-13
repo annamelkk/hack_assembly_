@@ -174,8 +174,7 @@ D;JEQ
 	(CALC_POWER_LOOP)
 		@R7
 		D=M
-		D=D+D	// D = R7 * 2
-		M=D	// R7 = R7 * 2
+		D=D+M	// D = R7 * 2
 		@R6
 		D=M
 		D=D-1

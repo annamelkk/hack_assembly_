@@ -7,58 +7,127 @@
 // R6: loop counter/general purpose temp
 // R7: mask/temp
 
-// user input y
+
+// to make the program work please set the corresponding values
+// for x1, x2, y and also set the R3 register 1 for black, 0 for white
+
+
+// VALIDATION
 if (y < 0 || y >= 256)
-	goto INVALID
+    goto INVALID
 
-// user input x1 and x2
-if (x2 < x1)
-	goto SWAP
-else
-	goto NO_SWAP
+// SWAP IF NEEDED
+if (x1 > x2)
+    temp = x1
+    x1 = x2
+    x2 = temp
 
-
-SWAP
-	temp = x1
-	x1 = x2
-	x2 = temp
-
-
-// DIV_X1_LOOP
-// R1 will store the remainder and R6 the quotient
-
-while (x1 > 0)
-	x1 -= 16
-	quotient++
-
+// CALCULATE START WORD ADDRESS
 start_word_address = SCREEN + 32*y + x1/16
+// after division R1 = x1 mod 16 (start_bit position)
 
-// DIV_X2_LOOP
-// R2 will store the remainder and R6 the quotient
-
-while (x2 > 0)
-	x2 -+ 16
-	quotient++
-
+// CALCULATE END WORD ADDRESS
 end_word_address = SCREEN + 32*y + x2/16
+// after division R2 = x2 mod 16 (end_bit position)
 
-if (end_word_address - start_word_address == 0)
-	goto CASE_SINGLE_WORD
-else if (end_word_address - start_word_address == 1)
-	goto CASE_TWO_WORDS
+// DETERMINE CASE
+diff = end_word_address - start_word_address
+if (diff == 0)
+    goto CASE_SINGLE_WORD
+else if (diff == 1)
+    goto CASE_TWO_WORDS
 else
-	goto CASE_MULTIPLE_WORDS
-
-// function to calculate power
-// local vars : N
-
-*output = 1
-
-if (N == 0)
-	goto CALC_POWER_END
-while (N > 0)
-	*output *= 2
-	N--
-goto CALC_POWER_END
+    goto CASE_MULTIPLE_WORDS
 
 
+// CASE 1: SINGLE WORD
+CASE_SINGLE_WORD:
+    // create left mask bits from start_bit to 15
+    left_mask = ~(2^start_bit - 1)
+    
+    // create right mask - bits from 0 to end_bit
+    right_mask = 2^(end_bit + 1) - 1
+    
+    // Combine masks
+    combined_mask = left_mask & right_mask
+    
+    if (color == 0)  // white
+        *start_word_address = *start_word_address & ~combined_mask
+    else  // black
+        *start_word_address = *start_word_address | combined_mask
+    
+    goto END_DRAW
+
+
+// CASE 2: TWO ADJACENT WORDS
+CASE_TWO_WORDS:
+    // gandle left word - bits from start_bit to 15
+    left_mask = ~(2^start_bit - 1)
+    
+    if (color == 0)  // white
+        *start_word_address = *start_word_address & ~left_mask
+    else  // black
+        *start_word_address = *start_word_address | left_mask
+    
+    // handle right word - bits from 0 to end_bit
+    right_mask = 2^(end_bit + 1) - 1
+    
+    if (color == 0)  // white
+        *end_word_address = *end_word_address & ~right_mask
+    else  // black
+        *end_word_address = *end_word_address | right_mask
+    
+    goto END_DRAW
+
+
+// CASE 3: MULTIPLE WORDS
+CASE_MULTIPLE_WORDS:
+    // handle left edge word - bits from start_bit to 15
+    left_mask = ~(2^start_bit - 1)
+    
+    if (color == 0)  // white
+        *start_word_address = *start_word_address & ~left_mask
+    else  // black
+        *start_word_address = *start_word_address | left_mask
+    
+    // fill middle words
+    current_address = start_word_address + 1
+    while (current_address < end_word_address)
+        if (color == 0)  // white
+            *current_address = 0x0000
+        else  // black
+            *current_address = 0xFFFF
+        current_address++
+    
+    // handle right edge word- bits from 0 to end_bit
+    right_mask = 2^(end_bit + 1) - 1
+    
+    if (color == 0)  // white
+        *end_word_address = *end_word_address & ~right_mask
+    else  // black
+        *end_word_address = *end_word_address | right_mask
+    
+    goto END_DRAW
+
+
+// HELPER FUNCTION: Calculate 2^N
+CALC_POWER(N):
+    result = 1
+    counter = N
+
+    if (N == 0)
+        goto CALC_POWER_[CONTECT]_RETURN
+    
+    while (N > 0)
+        result = result * 2
+	counter--
+    	if (counter > 0)
+		goto LOOP_[CONTEXT]
+
+    CALC_POWER_[CONTEXT]_RETURN:
+
+
+END_DRAW:
+INVALID:
+    // Infinite loop
+    goto INVALID
