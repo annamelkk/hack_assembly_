@@ -4,8 +4,14 @@
 // R3: color
 // R4: start_word_address
 // R5: end_word_address
-// R6: loop counter/general purpose temp
-// R7: mask/temp
+// R6: loop counter/current address
+// R7: temp/mask
+// R8: x1 / 16 (quotient)
+// R9: x2 / 16 (quotient)
+// R10: constant 16
+// R11: temp for swap
+// R12: loop counter for building masks
+// R13-R28: powers of 2 (2^0 through 2^15)
 
 
 // to make the program work please set the corresponding values
@@ -29,6 +35,9 @@ start_word_address = SCREEN + 32*y + x1/16
 // CALCULATE END WORD ADDRESS
 end_word_address = SCREEN + 32*y + x2/16
 // after division R2 = x2 mod 16 (end_bit position)
+
+// GENERATE POWER TABLE
+// Generate powers of 2 in R13-R28 for bit masking
 
 // DETERMINE CASE
 diff = end_word_address - start_word_address
@@ -61,7 +70,7 @@ CASE_SINGLE_WORD:
 
 // CASE 2: TWO ADJACENT WORDS
 CASE_TWO_WORDS:
-    // gandle left word - bits from start_bit to 15
+    // handle left word - bits from start_bit to 15
     left_mask = ~(2^start_bit - 1)
     
     if (color == 0)  // white
@@ -99,7 +108,7 @@ CASE_MULTIPLE_WORDS:
             *current_address = 0xFFFF
         current_address++
     
-    // handle right edge word- bits from 0 to end_bit
+    // handle right edge word - bits from 0 to end_bit
     right_mask = 2^(end_bit + 1) - 1
     
     if (color == 0)  // white
@@ -108,23 +117,6 @@ CASE_MULTIPLE_WORDS:
         *end_word_address = *end_word_address | right_mask
     
     goto END_DRAW
-
-
-// HELPER FUNCTION: Calculate 2^N
-CALC_POWER(N):
-    result = 1
-    counter = N
-
-    if (N == 0)
-        goto CALC_POWER_[CONTECT]_RETURN
-    
-    while (N > 0)
-        result = result * 2
-	counter--
-    	if (counter > 0)
-		goto LOOP_[CONTEXT]
-
-    CALC_POWER_[CONTEXT]_RETURN:
 
 
 END_DRAW:

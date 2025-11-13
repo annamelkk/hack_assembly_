@@ -13,9 +13,10 @@
 // R12: another loop counter we used for building masks
 // R13-R28 powers of 2 (2^0 through 2^15) 
 
-// validating y
+// if (y < 0 || y >= 256)
 @R0
 D=M
+// goto INVALID
 @INVALID
 D;JLT	// y < 0
 @256
@@ -29,7 +30,7 @@ D=A
 @R10
 M=D
 
-// check if x1 > x2
+// if (x1 > x2)
 @R1
 D=M
 @R2
@@ -37,17 +38,19 @@ D=D-M
 @NO_SWAP
 D;JLE
 
-// swap using temp variable
+// temp = x1
 @R2
 D=M	// D = x2
 @temp
 M=D	// temp = x2
 
+// x1 = x2
 @R1
 D=M	// D = x1
 @R2
 M=D	// x2 = x1
 
+// x2 = temp
 @temp
 D=M	// D = temp
 @R1
@@ -55,7 +58,7 @@ M=D	// x1 = temp
 
 (NO_SWAP)
 
-// for start_word_address = 32y + x1/16 + SCREEN
+// start_word_address = SCREEN + 32*y + x1/16
 @R0
 D=M
 @R0
@@ -95,8 +98,8 @@ M=0	// initializing quotient
 	@DIV_X1_LOOP
 	0;JMP
 (DIV_X1_END)
-//R1 = x1 mod 16
-//R8 = x1 / 16
+// after division R1 = x1 mod 16 (start_bit position)
+// R8 = x1 / 16
 
 @R8
 D=M
@@ -107,7 +110,7 @@ D=A
 @R4
 M=D+M	// address of start word SCREEN + 32y + x1/16
 
-// for end word address
+// end_word_address = SCREEN + 32*y + x2/16
 @R0
 D=M
 @R5
@@ -132,8 +135,8 @@ M=0	// initializing quotient
 	@DIV_X2_LOOP
 	0;JMP
 (DIV_X2_END)
-//R2 = x2 mod 16
-//R9 = x2 / 16
+// after division R2 = x2 mod 16 (end_bit position)
+// R9 = x2 / 16
 
 @R9
 D=M
@@ -144,10 +147,7 @@ D=A
 @R5
 M=D+M	// address of end word SCREEN + 32y + x2/16
 
-// before checking for each case and masking we need a table if powers of twos, since the
-// hack assembly doesn't support bit shifing ((((
-
-// generate powers of 2 in R13-R28
+// Generate powers of 2 in R13-R28 for bit masking
 @1
 D=A
 @R13
@@ -185,30 +185,34 @@ M=D	// current register index
 	@GEN_POWERS
 	D;JGT
 
-// check if x1 and x2 are in the same word
+// diff = end_word_address - start_word_address
 @R5
 D=M
 @R4
 D=D-M	// D = end - start
 
+// if (diff == 0)
+// goto CASE_SINGLE_WORD
 @CASE_SINGLE_WORD
 D;JEQ
 
+// else if (diff == 1)
 @1
 D=D-A
+// goto CASE_TWO_WORDS
 @CASE_TWO_WORDS
 D;JEQ	// if D-1=0 then two adjacent words
 
-// else multiple words
+// else
+// goto CASE_MULTIPLE_WORDS
 @CASE_MULTIPLE_WORDS
 0;JMP
 
 
-// checked, now functions
-
+// CASE_SINGLE_WORD:
 (CASE_SINGLE_WORD)
-	// Both x1 and x2 in same word
-	// Create left mask (bits x1 to 15)
+	// create left mask bits from start_bit to 15
+	// left_mask = ~(2^start_bit - 1)
 	@R1
 	D=M     // D = start_bit
 	@R11
@@ -224,7 +228,8 @@ D;JEQ	// if D-1=0 then two adjacent words
 	@R7
 	M=D     // R7 = left_mask
 	
-	// Create right mask (bits 0 to x2)
+	// create right mask - bits from 0 to end_bit
+	// right_mask = 2^(end_bit + 1) - 1
 	@R2
 	D=M     // D = end_bit
 	D=D+1   // D = end_bit + 1
@@ -238,42 +243,48 @@ D;JEQ	// if D-1=0 then two adjacent words
 	D=M     // D = 2^(end_bit+1)
 	D=D-1   // D = mask with bits [0..end_bit] set
 	
-	// Combine masks with AND
+	// Combine masks
+	// combined_mask = left_mask & right_mask
 	@R7
 	D=D&M   // D = left_mask & right_mask
 	@R7
 	M=D     // R7 = combined_mask
 	
-	// Apply color
+	// if (color == 0)
 	@R3
 	D=M
 	@SINGLE_BLACK
 	D;JNE   // if color != 0, draw black
 	
-	// White: clear the masked bits
+	// white
+	// *start_word_address = *start_word_address & ~combined_mask
 	@R7
 	D=!M    // invert mask
 	@R4
 	A=M
 	D=M
 	M=D&M   // clear bits
+	// goto END_DRAW
 	@END_DRAW
 	0;JMP
 	
 	(SINGLE_BLACK)
+	// else black
+	// *start_word_address = *start_word_address | combined_mask
 	@R7
 	D=M
 	@R4
 	A=M
 	D=D|M
 	M=D   // set bits
+	// goto END_DRAW
 	@END_DRAW
 	0;JMP
 
+// CASE_TWO_WORDS:
 (CASE_TWO_WORDS)
-	// x1 and x2 in adjacent words
-	
-	// Left word: bits from x1 to 15
+	// handle left word - bits from start_bit to 15
+	// left_mask = ~(2^start_bit - 1)
 	@R1
 	D=M     // D = start_bit
 	@R11
@@ -289,11 +300,14 @@ D;JEQ	// if D-1=0 then two adjacent words
 	@R7
 	M=D
 	
+	// if (color == 0)
 	@R3
 	D=M
 	@TWO_LEFT_BLACK
 	D;JNE
 	
+	// white
+	// *start_word_address = *start_word_address & ~left_mask
 	@R7
 	D=!M
 	@R4
@@ -304,6 +318,8 @@ D;JEQ	// if D-1=0 then two adjacent words
 	0;JMP
 	
 	(TWO_LEFT_BLACK)
+	// else black
+	// *start_word_address = *start_word_address | left_mask
 	@R7
 	D=M
 	@R4
@@ -312,7 +328,8 @@ D;JEQ	// if D-1=0 then two adjacent words
 	M=D
 	
 	(TWO_RIGHT)
-	// Right word: bits from 0 to x2
+	// handle right word - bits from 0 to end_bit
+	// right_mask = 2^(end_bit + 1) - 1
 	@R2
 	D=M
 	D=D+1
@@ -328,32 +345,41 @@ D;JEQ	// if D-1=0 then two adjacent words
 	@R7
 	M=D
 	
+	// if (color == 0)
 	@R3
 	D=M
 	@TWO_RIGHT_BLACK
 	D;JNE
 	
+	// white
+	// *end_word_address = *end_word_address & ~right_mask
 	@R7
 	D=!M
 	@R5
 	A=M
 	D=D&M
 	M=D
+	// goto END_DRAW
 	@END_DRAW
 	0;JMP
 	
 	(TWO_RIGHT_BLACK)
+	// else black
+	// *end_word_address = *end_word_address | right_mask
 	@R7
 	D=M
 	@R5
 	A=M
 	D=D|M
 	M=D
+	// goto END_DRAW
 	@END_DRAW
 	0;JMP
 
+// CASE_MULTIPLE_WORDS:
 (CASE_MULTIPLE_WORDS)
-	// Left edge mask (start word)
+	// handle left edge word - bits from start_bit to 15
+	// left_mask = ~(2^start_bit - 1)
 	@R1
 	D=M
 	@R11
@@ -369,11 +395,14 @@ D;JEQ	// if D-1=0 then two adjacent words
 	@R7
 	M=D
 	
+	// if (color == 0)
 	@R3
 	D=M
 	@MULTI_LEFT_BLACK
 	D;JNE
 	
+	// white
+	// *start_word_address = *start_word_address & ~left_mask
 	@R7
 	D=!M
 	@R4
@@ -384,6 +413,8 @@ D;JEQ	// if D-1=0 then two adjacent words
 	0;JMP
 	
 	(MULTI_LEFT_BLACK)
+	// else black
+	// *start_word_address = *start_word_address | left_mask
 	@R7
 	D=M
 	@R4
@@ -392,13 +423,15 @@ D;JEQ	// if D-1=0 then two adjacent words
 	M=D
 
 	(MULTI_MIDDLE)
-	// Fill middle words
+	// fill middle words
+	// current_address = start_word_address + 1
 	@R4
 	D=M 
 	D=D+1
 	@R6
 	M=D
-	
+
+	// while (current_address < end_word_address)
 	(FILL_LOOP)
 		@R6
 		D=M
@@ -407,11 +440,14 @@ D;JEQ	// if D-1=0 then two adjacent words
 		@FILL_END
 		D;JGE
 
+		// if (color == 0)
 		@R3
 		D=M
 		@FILL_BLACK
 		D;JNE
 		
+		// white
+		// *current_address = 0x0000
 		@R6
 		A=M
 		M=0
@@ -419,11 +455,14 @@ D;JEQ	// if D-1=0 then two adjacent words
 		0;JMP
 		
 		(FILL_BLACK)
+		// else black
+		// *current_address = 0xFFFF
 		@R6
 		A=M
 		M=-1
 		
 		(FILL_CONTINUE)
+		// current_address++
 		@R6
 		D=M
 		D=D+1
@@ -432,7 +471,8 @@ D;JEQ	// if D-1=0 then two adjacent words
 		0;JMP
 	(FILL_END)
 
-	// Right edge mask (end word)
+	// handle right edge word - bits from 0 to end_bit
+	// right_mask = 2^(end_bit + 1) - 1
 	@R2
 	D=M
 	D=D+1
@@ -448,21 +488,27 @@ D;JEQ	// if D-1=0 then two adjacent words
 	@R7
 	M=D
 	
+	// if (color == 0)
 	@R3
 	D=M
 	@MULTI_RIGHT_BLACK
 	D;JNE
 	
+	// white
+	// *end_word_address = *end_word_address & ~right_mask
 	@R7
 	D=!M
 	@R5
 	A=M
 	D=D&M
 	M=D
+	// goto END_DRAW
 	@END_DRAW
 	0;JMP
 	
 	(MULTI_RIGHT_BLACK)
+	// else black
+	// *end_word_address = *end_word_address | right_mask
 	@R7
 	D=M
 	@R5
@@ -470,6 +516,9 @@ D;JEQ	// if D-1=0 then two adjacent words
 	D=D|M
 	M=D
 
+// END_DRAW:
+// INVALID:
+// goto INVALID
 (END_DRAW)
 (INVALID)
 @INVALID
